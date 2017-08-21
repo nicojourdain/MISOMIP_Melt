@@ -193,7 +193,7 @@ SUBROUTINE MISOMIP_Melt_Consv( Model,Solver,dt,Transient )
   INTEGER :: varXid, varYid, varid, dimid1, dimid2, dimid3, lenX, lenY, lenTime, status1, res, ierr
 
   REAL(KIND=dp) :: x_NC_Init, x_NC_Fin, y_NC_Init, y_NC_Fin, x_NC_Res, y_NC_Res, localInteg, Integ, Integ_Reduced
-  REAL(KIND=dp) :: Melt_NEMO_Integ , Melt_NEMO_Integ_Reduced, Factor_Corr, MeltVal
+  REAL(KIND=dp) :: Melt_NEMO_Integ , Melt_NEMO_Integ_Reduced, Factor_Corr, MeltVal, facunits
 
 
 !------------------------------------------------------------------------------
@@ -242,6 +242,10 @@ SUBROUTINE MISOMIP_Melt_Consv( Model,Solver,dt,Transient )
      Message='Melt Rates File not found'
      CALL FATAL(SolverName,Message)
   END IF
+
+  facunits = GetCReal( Model % Constants, 'Factor melt units', Found )
+  IF (.NOT.Found) &
+             CALL FATAL(SolverName,'<Factor melt units> not found')
 
   ! GET NTCDF DIMENSIONS FOR ALLOCATION
   CALL check(nf90_open(FILE_NAME,NF90_NOWRITE,ncid))
@@ -293,7 +297,7 @@ SUBROUTINE MISOMIP_Melt_Consv( Model,Solver,dt,Transient )
 
   DO i=1,lenX 
         DO j=1,lenY
-                Melt_NEMO_Area(i,j) = meltvarNC_Av(i,j) * X_NC_Res * Y_NC_Res * 1e-3 * 3600 * 24 * 365 !Conversion m/yr
+                Melt_NEMO_Area(i,j) = meltvarNC_Av(i,j) * X_NC_Res * Y_NC_Res * facunits ! from kg/m^2/s to meter of ice / yr
         END DO
   END DO
 
@@ -315,7 +319,7 @@ SUBROUTINE MISOMIP_Melt_Consv( Model,Solver,dt,Transient )
 
         if (GM(GMPerm(node)) .lt. 0.5) then
                 CALL BiLinealInterp(xP,yP,meltvarNC_Av,meltInT, x_NC_Res, y_NC_Res, x_NC_Init, y_NC_Init)
-                Melt(MeltPerm(node)) = meltInt * 1e-3 * 3600 * 24 * 365 ! from mm/s to m/yra
+                Melt(MeltPerm(node)) = meltInt * facunits ! from kg/m^2/s to meter of ice / yr
         else
                 Melt(MeltPerm(node)) = 0.0_dp
         end if
